@@ -75,9 +75,14 @@
     }
 
     function h512(m) {
-        /*var shaObj = new jsSHA("SHA-512", 'ARRAYBUFFER')
+        var shaObj = new jsSHA("SHA-512", 'ARRAYBUFFER')
         shaObj.update(m.buffer)
-        return new Uint8Array(shaObj.getHash('ARRAYBUFFER'))*/
+        return new Uint8Array(shaObj.getHash('ARRAYBUFFER'))
+        //return blake.blake2b(m)
+
+    }
+
+    function h512_blake2b(m) {
         return blake.blake2b(m)
 
     }
@@ -225,11 +230,11 @@
     }
 
     function special_signing(kL, kR, A, M) { // private/secret key left and right sides kL & kR, public key A, and message M in bytes
-        var r = h512(concatenate_uint8_arrays([kR, M]))
+        var r = h512_blake2b(concatenate_uint8_arrays([kR, M]))
 
         r = ed25519.bytes2bi(r).mod(ed25519.l) // l is  base order n of Section III of "BIP32-Ed25519 Hierarchical Deterministic Keys over a Non-linear Keyspace"
         var R = ed25519.encodepoint(ed25519.scalarmultbase(r))
-        var x = ed25519.bytes2bi(h512(concatenate_uint8_arrays([R, A, M])))
+        var x = ed25519.bytes2bi(h512_blake2b(concatenate_uint8_arrays([R, A, M])))
         var S = ed25519.encodeint(r.plus(x.times(ed25519.bytes2bi(kL))).mod(ed25519.l))
         return concatenate_uint8_arrays([R, S])
     }

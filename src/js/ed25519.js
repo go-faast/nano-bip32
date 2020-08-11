@@ -68,7 +68,7 @@
         }
     }
 
-    function hash(s) {
+    function hash(m) {
         return blake.blake2b(m)
     }
 
@@ -275,12 +275,22 @@
     }
 
     function signature(m, sk, pk) {
+        if (typeof m === 'string') {
+            m = new Uint8Array(string2bytes(m));
+        }
         var hi = inthash(sk);
-        var hs = stringhash(sk);
+        var hs = hash(sk);
         var a = k1.add(k2.and(hi));
-        var r = inthash(hs.slice(32, 64) + m);
+        var rdata = new Uint8Array(32 + m.length);
+        rdata.set(hs.slice(32, 64));
+        rdata.set(m, 32);
+        var r = inthash(rdata);
         var rp = scalarmult(bp, r);
-        var s0 = inthash(bytes2string(encodepoint(rp)) + bytes2string(pk) + m)
+        var s0data = new Uint8Array(32 + pk.length + m.length);
+        s0data.set(encodepoint(rp));
+        s0data.set (pk, 32);
+        s0data.set(m, 32 + pk.length);
+        var s0 = inthash(s0data);
         var s = r.add(a.times(s0)).mod(l);
         return encodepoint(rp).concat(encodeint(s));
     }
@@ -302,10 +312,17 @@
     }
 
     function checksig(sig, msg, pk) {
+        if (typeof msg === 'string') {
+            msg = new Uint8Array(string2bytes(msg));
+        }
         var r = decodepoint(sig.slice(0, 32));
         var a = decodepoint(pk);
         var s = decodeint(sig.slice(32, 64));
-        var h = inthash(bytes2string(encodepoint(r).concat(pk)) + msg);
+        var hdata = new Uint8Array(32 + pk.length + msg.length);
+        hdata.set(encodepoint(r));
+        hdata.set(pk, 32);
+        hdata.set(msg, 32 + pk.length);
+        var h = inthash(hdata);
         var v1 = scalarmult(bp, s);
         var v2 = edwards(r, scalarmult(a, h));
         return v1[0].equals(v2[0]) && v1[1].equals(v2[1]);

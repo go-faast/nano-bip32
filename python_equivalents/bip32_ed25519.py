@@ -15,7 +15,10 @@ import secrets
 import ed25519
 
 def h512(m):
-    #return hashlib.sha512(m).digest()
+    return hashlib.sha512(m).digest()
+    #return hashlib.blake2b(m).digest()
+
+def h512_blake2b(m):
     return hashlib.blake2b(m).digest()
 
 def h256(m):
@@ -120,11 +123,11 @@ def safe_public_child_key(extended_public_key, chain_code, i, return_as_hex=True
         return (A, c)
 
 def special_signing(kL, kR, A, M): # private/secret key left and right sides kL & kR, public key A, and message M in bytes
-    r = h512(kR + M)
+    r = h512_blake2b(kR + M)
 
     r = int.from_bytes(r, 'little') % ed25519.l # base order n
     R = ed25519.encodepoint(ed25519.scalarmultbase(r))
-    x = int.from_bytes(h512(R+A+M), 'little')
+    x = int.from_bytes(h512_blake2b(R+A+M), 'little')
     S = ed25519.encodeint((r + (x * int.from_bytes(kL, 'little'))) % ed25519.l)
     return R+S
 
